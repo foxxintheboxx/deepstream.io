@@ -1,7 +1,9 @@
 'use strict'
 
 const messageParser = require('./message-parser')
+const messageBuilder = require('./message-builder')
 const C = require('../constants/constants')
+const _ = require('underscore')
 
 /**
  * The MessageProcessor consumes blocks of parsed messages emitted by the
@@ -66,7 +68,7 @@ module.exports = class MessageProcessor {
 
     const length = parsedMessages.length
     for (let i = 0; i < length; i++) {
-      parsedMessage = parsedMessages[i]
+      parsedMessage = this._addMetaData(parsedMessages[i], socketWrapper.authData || {})
 
       if (parsedMessage === null) {
         this._options.logger.log(C.LOG_LEVEL.WARN, C.EVENT.MESSAGE_PARSE_ERROR, message)
@@ -84,6 +86,27 @@ module.exports = class MessageProcessor {
         this._onPermissionResponse.bind(this, socketWrapper, parsedMessage),
         socketWrapper.authData
       )
+    }
+  }
+
+  _addMetaData(message, metaData) {
+    if (message.topic === C.TOPIC.RPC) {
+      const data = _.map(message.data, (value) => {
+        const type = value.charAt(0)
+        if (type === C.TYPES.OBJECT) {
+          return messageBuilder.typed(_.extend(messageParser.convertTyped(value), metaData))
+        } else {
+          return value
+        }
+      })
+      return {
+        raw: messageBuilder.getMsg(message.topic, message.action, data),
+        topic: message.topic,
+        action: message.action,
+        data
+      }
+    } else {
+      return message
     }
   }
 
