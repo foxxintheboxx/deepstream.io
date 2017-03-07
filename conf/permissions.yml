@@ -1,19 +1,39 @@
 presence:
   "*":
-    allow: true
+    allow: false
+
 record:
   "*":
-    create: true
+    create: "user.data.role === 'server'"
     write: true
     read: true
-    delete: true
-    listen: true
+    delete: "user.data.role === 'server'"
+    listen: "user.data.role === 'server'"
+
+  "userlocation/$uid":
+    write: "user.data.uid === $uid"
+    read: "user.data.uid === $uid || user.data.role === 'server'"
+
+  "nearuser/$uid":
+    write: "user.data.role === 'server'"
+    read: "user.data.uid === $uid || user.data.role === 'server'"
+
+  "object/*":
+    write: "user.data.role === 'server'"
+
+  "object/simple/$uid":
+    read: "user.data.role === 'server' || _('nearuser/' + user.data.uid)[$uid]"
+
+  "object/complete/$uid":
+    read: "user.data.role === 'server' || ( _('nearuser/' + user.data.uid)[$uid] && _('permissions/' + user.data.uid)['paid'] )"
+
 event:
   "*":
-    publish: true
+    publish: "user.data.role === 'server'"
     subscribe: true
-    listen: true
+    listen: "user.data.role === 'server'"
+
 rpc:
   "*":
-    provide: true
+    provide: "user.data.role === 'server'"
     request: true
